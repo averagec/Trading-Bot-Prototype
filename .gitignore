@@ -1,0 +1,31 @@
+# secrets and local settings
+.env
+*.pem
+.claude/settings.local.json
+
+# runtime state and account history (never publish)
+*.log
+forex_bot_dashboard.xlsx
+pair_data.json
+news_cache.json
+risk_baselines.json
+STOP
+*.tmp
+research/*.txt
+
+# python / pytest
+__pycache__/
+*.pyc
+.pytest_cache/
+research/.pytest_tmp*/
+
+# research data and caches (regenerate with `python -m research.fetch_data`)
+research/data/
+research/cache/
+*.parquet
+# backtest outputs: keep only the v1 baseline that CLAUDE.md and the reviewer compare against
+research/output/*
+!research/output/v1/
+
+# stray folder created by a shell brace expansion
+{agents,strategies,utils,data}/
