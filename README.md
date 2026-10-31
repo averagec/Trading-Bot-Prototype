@@ -1,7 +1,38 @@
-# Forex Bot — Setup & Run Guide
+# Forex Bot — MT5/FTMO trading bot with a backtest and test harness
 
-An MT5/FTMO bot (Windows only). It is not a validated strategy: see `research/RESULTS.md` for the backtest results and
-`REVIEW_2026-10-21.md` for the open review findings. Run it on a demo account.
+A Windows bot for MetaTrader 5 / FTMO demo accounts, plus a research engine that replays the live strategy logic so it can be
+tested honestly. **The strategy itself has not been shown to have an edge, and this repo says so.**
+
+## What this project is
+
+- **The bot** (`main.py`, `strategies/`, `utils/`, `agents/`): once per M5 candle close it checks six pairs (EURUSD, GBPUSD,
+  USDJPY, AUDUSD, USDCAD, XAUUSD). The rule set is an H4 EMA trend, an H1 fair-value gap, a quarterly-theory time filter, an M15
+  liquidity sweep and an M5 confirmation candle, combined into a confluence score. Trades use a 3R target, a structure-based
+  stop, breakeven at 1R, fixed 0.25% risk, a 3% daily loss gate and a news filter. An optional LLM check can only veto a trade.
+- **The research engine** (`research/`): a backtest and Monte Carlo that run the same signal code as the live bot, with a
+  random-direction null test, spread and no-look-ahead checks, and the original 16-month result kept as a baseline.
+- **The safety and test work**: demo-only guard, kill switch, Friday weekend-flatten, fail-closed news and a reviewer-agent gate
+  (see `CLAUDE.md` and `progress.md`). MT5 is mocked throughout, so the 430-odd tests need no terminal.
+
+## What I found
+
+| Question | Result |
+|---|---|
+| Does the strategy make money in the faithful backtest? | No. 825 trades over 16 months: expectancy **-0.205 R** per trade (95% CI -0.31 to -0.10). |
+| Is that different from random? | No. With the same entries, stops and costs but random direction, the null averages -0.177 R; the real strategy is statistically indistinguishable from it (p = 0.20). |
+| Does a longer history change it? | On the extended 2021-2026 data the default run gives 3,509 trades at -0.116 R. Still negative, still no demonstrated edge. |
+| Has it traded live? | No. There is no live track record. |
+
+The value here is the process, not a profitable system: building a backtest that matches the live code, finding and removing
+look-ahead and sizing problems, and reporting a negative result instead of tuning until it looks good. Strategy and risk-rule
+changes are meant to be pre-specified, developed on earlier data and checked once on a later holdout (`CLAUDE.md`).
+
+See `research/RESULTS.md` for the full results and `REVIEW_2026-10-21.md` for the open review findings. Run the bot on a demo
+account only.
+
+---
+
+# Setup & Run Guide
 
 ## Prerequisites
 - Windows PC (MT5 Python library is Windows only)
@@ -24,6 +55,12 @@ The bot only trades demo accounts. It logs the account number, server and type (
 exits (code 2) on anything else, and it re-checks the account type every cycle, so switching the terminal to a real
 account while the bot runs also stops it (nothing is closed or modified on that account). To trade a real or contest account you must deliberately set `FOREX_ALLOW_LIVE` to `YES`
 (`setx FOREX_ALLOW_LIVE "YES"`); no other value counts.
+
+If `ANTHROPIC_API_KEY` is set, an LLM reviews every proposed trade, but only in **shadow mode**: its answer is recorded and
+never acted on, so the bot trades exactly what the rules say. To let it veto trades, set `FOREX_LLM_VETO` to `1`.
+Every proposed trade, every trade stopped after the entry conditions passed, and every order the broker accepted (with its ticket)
+is appended to `logs/candidates.jsonl` for offline evaluation. If the bot stops (kill switch, refused account) while it still has
+positions open, it says so in the log and on the dashboard, because those positions then get no breakeven or Friday-flatten management.
 
 To make the bot log in itself instead, set both environment variables (PowerShell, applies to new terminals):
 
