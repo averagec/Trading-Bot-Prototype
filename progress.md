@@ -3,6 +3,20 @@
 Newest entry at the top. Claude adds one entry at the end of every task (see CLAUDE.md, "Working loop").
 Format: date - what changed - result/verdict - what's next or open.
 
+## 2026-10-31 (analyst: sessions/pairs/weekends; quant: loss anatomy, methods, risk profile)
+- Data analyst (`research/reports/session_pair_weekend_analysis.md`, `research/analysis_sessions.py`, `analysis_tables.py`, 27 tests): DEV 2014-01..2021-05, sentinel treated as missing, 4,173 trades,
+  -0.100 R vs reflect-null -0.104 (skill +0.004, SE 0.019). Live code never enters Sat/Sun (Friday flatten from 20:00 UTC, first entry Monday 09:00 UTC); the replay makes 18 Sunday decisions (0.4 %).
+  Friday flatten +0.013 R/trade. No pair has detectable skill (-0.035..+0.037); fewer pairs change volume and drawdown, not expectancy (3 pairs: -46 % vs -70 % drawdown). 0 of 14 pre-registered
+  session/weekday skill tests pass; cost per R varies only 0.086-0.106 by hour. Exploratory only: 20:00-21:59 UTC decisions +0.127 R [-0.000, +0.262], power about 25 % on FINAL, not pursued.
+- Quant (`research/reports/quant_loss_risk_review.md`, `quant_*.py`, 40 tests, 3 preregs): DEV with the placeholder spread as recorded, 3,970 trades, -0.131 R (cost 0.047 spread + 0.044 commission = 0.091 R).
+  Exits 56 % full stop / 25 % breakeven / 14 % target / 5 % flatten; only 6 % of full stops reached +1R first. Spread cap worth +843 R on the null, Friday flatten +52 R, other gates about 0.
+  ATR-scaled minimum stop (k 1.0-3.0 x ATR(H1,14)) cuts null drag by +0.040..+0.100 R, year-stable, real-signal gain not significant; nominated for nothing (arms k 2.5 and 3.0 added after seeing the trend).
+  Risk: at 0.25 % the 10 % static limit is breached within 12 / 24 months in 86 % / 98 % of simulated paths (resample of one DEV history, so a model, not a bound). Proposed demo profile P2 (0.15 % risk, max 2 open incl. pending,
+  loss ladder, halt at -8 %, 1.5 % day stop, pause after 6 losses): 0 breaches in 20,000 resampled paths, about -0.5 %/month. Live-code spec in section 3.5; nothing implemented.
+- The two baselines differ by data treatment (placeholder as recorded vs imputed), not by error; the quant's sentinel-missing re-run gives -0.1125 R.
+- Verdict: reviewer FAIL on wording only (daily-limit 0.00 % and "0 of 20,000" over-claims in the quant report); fixed. Suite 625 passed, no-lookahead passed, regression 861 / -0.210 R, no tracked file changed, FINAL never read.
+- Open: quant preregs have no hash/commit (commit preregs before runs next time); decide on the demo-profile live-code change (reviewer-gated) and whether to pre-register the ATR floor for a locked-holdout run; analyst follow-ups F1-F4 specified, not run.
+
 ## 2026-10-30 (A2' slow-horizon study: null)
 - Pre-registered (`research/reports/ai_slow_prereg.md`) and run once on DEV (2003-2021-05, 5 pairs, H4 and D1, k 1.0/1.5, logistic confirmatory, K=4). Verdict: **no variant learnable, all four falsified**
   (directional AUC 0.500 to 0.505; C1, C2, S and F all fail; features make log-loss slightly worse than the non-directional model). Top-decile net R has no lower bound above 0 at x1, x1.5 or x2.

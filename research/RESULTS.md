@@ -270,3 +270,11 @@ It is one of eight descriptive boosted-model cells (twelve model-variant cells w
 Reading, with the lead's pre-stated interpretation: this is a null for effects of the size the design can see (simulated power: H4 sees a realised directional AUC of about 0.52, D1 about 0.545; the full-pass minimum detectable gain was about 0.05 to 0.12 R over the unchosen side). Beyond that, the observed directional-AUC intervals themselves rule out an AUC above about 0.514 to 0.517 (H4)
 and 0.524 (D1), which corresponds to a gain of roughly 0.03 to 0.05 R. A smaller effect is neither seen nor excluded, and at D1 cost (0.008 to 0.02 R) a 0.02 R edge would be attractive but is undetectable with 960 weeks of five correlated pairs. Together with the H1 study (null, carried by 2019H2): no stable directional structure in OHLC + spread + time + USD-factor features at 1 hour to 4 days on this broker's 2003-2021 history.
 Caveats: nominal pre-2010 spreads (an assumption); H1-path labels (agree with M5-path labels in 99.8 to 100 % of exits); one label family; one linear confirmatory model; 14-day embargo with trailing features adjacent to the test blocks.
+
+
+## Sessions, pairs, weekends and loss anatomy (2026-10-31, DEV only)
+
+Full reports: `reports/session_pair_weekend_analysis.md` (data analyst) and `reports/quant_loss_risk_review.md` (quant). Neither finds directional skill.
+Analyst: 4,173 trades, -0.100 R vs null -0.104 (skill +0.004, SE 0.019); no pair and no session/weekday bucket shows skill after correction; the live bot never trades weekends.
+Quant: 3,970 trades, -0.131 R, 0.091 R of it cost; an ATR-scaled minimum stop reduces the null drag by 0.04-0.10 R (hypothesis, not confirmed on FINAL); at the live 0.25% risk the 10% static loss limit is breached within 12 months in 86% of resampled paths.
+The two baselines differ by treatment of the broker 50-point placeholder spread (as recorded vs imputed), not by error.
