@@ -157,7 +157,9 @@ def test_cycle_stops_before_touching_anything_when_the_account_is_no_longer_allo
         with pytest.raises(SystemExit) as exc:
             bot._run_cycle()
     assert exc.value.code == 2
-    for name in ("get_account_info", "get_open_positions", "get_pending_orders", "close_position", "cancel_pending_order"):
+    # the halt may READ the open positions (to report how many are still open) but must not act on anything
+    for name in ("get_account_info", "get_pending_orders", "close_position", "cancel_pending_order", "place_order",
+                 "place_pending_order"):
         getattr(conn, name).assert_not_called()      # positions on the refused account are left alone
     flat.assert_not_called()
     analyse.assert_not_called()

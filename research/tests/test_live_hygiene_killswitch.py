@@ -48,7 +48,8 @@ def test_stop_file_exits_cleanly_without_touching_anything(live_main, stop_file)
     stop_file.write_text("")
     bot, conn, xl, flat, analyse, exit_ = _stopped_cycle(live_main)
     assert exit_.code == 0 and bot.running is False
-    for name in ("account_still_allowed", "get_account_info", "get_open_positions", "get_pending_orders",
+    # the halt READS the open positions once, to report how many are still open; it never acts on anything
+    for name in ("account_still_allowed", "get_account_info", "get_pending_orders",
                  "close_position", "cancel_pending_order", "place_order", "place_pending_order"):
         getattr(conn, name).assert_not_called()
     flat.assert_not_called()

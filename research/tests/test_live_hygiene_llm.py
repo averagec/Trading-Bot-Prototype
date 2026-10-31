@@ -182,7 +182,7 @@ def _analyse(live_main, monkeypatch, llm_says, key=FAKE_KEY, direction="BUY"):
             mock.patch.object(live_main, "order_manager", om), mock.patch.object(live_main, "news_agent", news), \
             mock.patch.object(live_main, "pair_observer", observer), mock.patch.object(live_main, "regime_detector", regime), \
             mock.patch.object(live_main, "correlation_filter", corr), mock.patch.object(live_main, "excel_manager", xl), \
-            mock.patch.object(live_main, "llm_agent", llm), \
+            mock.patch.object(live_main, "llm_agent", llm), mock.patch.object(live_main, "LLM_VETO_ACTIVE", True), \
             mock.patch.object(live_main, "run_confluence", return_value=dict(confluence)), \
             mock.patch.object(live_main.ForexBot, "_place_market_order") as market:
         bot._analyse_pair("EURUSD", {"balance": 1000, "equity": 1000}, [], [])

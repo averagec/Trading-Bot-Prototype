@@ -20,6 +20,10 @@ MT5_CONFIG = {
 # deliberately and with this exact word:  setx FOREX_ALLOW_LIVE "YES"
 ALLOW_LIVE_ACCOUNT = os.environ.get("FOREX_ALLOW_LIVE") == "YES"
 
+# The LLM reviews each proposed trade but, by default, only in shadow mode: its answer is logged to logs/candidates.jsonl
+# and never acted on, so the bot trades exactly what the rules say. To let it veto: setx FOREX_LLM_VETO "1"
+LLM_VETO_ACTIVE = os.environ.get("FOREX_LLM_VETO") == "1"
+
 # ── Trading Pairs ──────────────────────────────────────────────────────────────
 PAIRS = [
     "EURUSD", "GBPUSD", "USDJPY",

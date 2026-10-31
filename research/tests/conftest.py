@@ -15,6 +15,13 @@ from research.synth_vendor import make_truth_m1, build_mt5_cache, write_vendor_f
 M5_FROM, H1_FROM, H4_FROM = "2024-09-01", "2024-08-01", "2024-07-01"
 
 
+@pytest.fixture(autouse=True)
+def _candidate_log_to_tmp(tmp_path, monkeypatch):
+    """No test may append to the live bot's logs/candidates.jsonl."""
+    from utils import candidate_log
+    monkeypatch.setattr(candidate_log, "LOG_PATH", tmp_path / "candidates.jsonl")
+
+
 @pytest.fixture(scope="session")
 def truth_m1():
     return make_truth_m1("2024-04-01", "2025-02-01", seed=7)

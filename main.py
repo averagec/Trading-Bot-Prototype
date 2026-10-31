@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from config import (PAIRS, TRIGGER_TF, PRIMARY_TF, CONFIRM_TF, BIAS_TF,
-                    RISK, MIN_SCORE_TO_TRADE, EXCEL, BREAKEVEN, FRIDAY_FLATTEN_UTC, BOT_MAGIC)
+                    RISK, MIN_SCORE_TO_TRADE, EXCEL, BREAKEVEN, FRIDAY_FLATTEN_UTC, BOT_MAGIC, LLM_VETO_ACTIVE)
 from mt5_connector import connector
 from strategies.smc_strategies import run_confluence
 from agents.news_agent import news_agent
@@ -27,6 +27,7 @@ from utils.regime_detector import regime_detector
 from utils.correlation_filter import correlation_filter
 from utils.pre_trade_validator import pre_trade_validator
 from utils.flatten import flatten_bot
+from utils import candidate_log
 
 try:
     import MetaTrader5 as mt5
@@ -66,6 +67,13 @@ class ForexBot:
             excel_manager.create_workbook()
         else:
             logger.info(f"Using existing workbook: {EXCEL['path']}")
+
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            logger.info("LLM review: off (ANTHROPIC_API_KEY is not set) - the rules alone decide.")
+        elif LLM_VETO_ACTIVE:
+            logger.info("LLM review: veto ACTIVE (FOREX_LLM_VETO=1) - the LLM can turn a proposed trade into HOLD.")
+        else:
+            logger.info("LLM review: shadow - the LLM is asked and its answer logged, but the rules alone decide.")
 
         connected = connector.connect()
         if connected:
@@ -119,10 +127,25 @@ class ForexBot:
         Positions on that account are left alone; nothing is closed, cancelled or modified."""
         self._halt(why, "STOPPED - ACCOUNT REFUSED", 2)
 
+    @staticmethod
+    def _open_bot_tickets() -> list:
+        """Tickets of the bot's own open positions (magic == BOT_MAGIC); [] if they cannot be read."""
+        try:
+            return [p["ticket"] for p in connector.get_open_positions() if p.get("magic") == BOT_MAGIC]
+        except Exception:
+            return []
+
     def _halt(self, why: str, status: str, exit_code: int):
         """Exit the process now: CRITICAL log, MT5 disconnect, dashboard `status` with no balance, SystemExit(exit_code).
         Nothing is closed, cancelled, placed or modified."""
-        logger.critical(f"BOT STOPPED - {why}. Nothing was closed, cancelled, placed or changed.")
+        open_tickets = self._open_bot_tickets()
+        note = ""
+        if open_tickets:
+            note = (f" {len(open_tickets)} BOT POSITION(S) STILL OPEN (tickets {', '.join(map(str, open_tickets))}): they keep"
+                    f" their server-side SL/TP but breakeven management and the Friday flatten are NOT running - close them"
+                    f" by hand or restart the bot.")
+            status = f"{status} ({len(open_tickets)} BOT POSITION{'S' if len(open_tickets) != 1 else ''} OPEN)"
+        logger.critical(f"BOT STOPPED - {why}. Nothing was closed, cancelled, placed or changed.{note}")
         self.running = False
         try:
             connector.disconnect()
@@ -320,10 +343,17 @@ class ForexBot:
         action = "BLOCKED" if news_blocked else ("SIGNAL" if checklist_met else "SKIPPED")
         pair_observer.record_signal(symbol, confluence, action)
 
-        # LLM review (optional, veto-only): it may turn the checklist's trade into HOLD, never flip or create one
-        use_llm = bool(os.environ.get("ANTHROPIC_API_KEY")) and direction in ("BUY", "SELL")
+        # LLM review (optional, veto-only: it may turn the checklist's trade into HOLD, never flip or create one).
+        # By default it runs in shadow mode - asked and logged, never acted on - until LLM_VETO_ACTIVE is set.
+        use_llm      = bool(os.environ.get("ANTHROPIC_API_KEY")) and direction in ("BUY", "SELL")
+        llm_decision = None
         if use_llm:
-            llm_decision = llm_agent.make_trade_decision(symbol, confluence, news_summary, account, positions)
+            try:
+                llm_decision = llm_agent.make_trade_decision(symbol, confluence, news_summary, account, positions)
+            except Exception as e:      # an LLM failure is a HOLD (as in llm_agent), and in shadow mode it must not stop the trade
+                logger.error(f"{symbol}: LLM review failed ({type(e).__name__}) - treated as HOLD")
+                llm_decision = {"decision": "HOLD", "confidence": 0.0, "reasoning": f"LLM error: {type(e).__name__}"}
+        if llm_decision is not None and LLM_VETO_ACTIVE:
             final_dir    = apply_veto(direction, llm_decision)
             final_conf   = llm_decision["confidence"]
             final_reason = llm_decision["reasoning"]
@@ -331,6 +361,8 @@ class ForexBot:
             final_dir    = direction
             final_conf   = int(adjusted_prob)
             final_reason = f"Checklist {checks_passed}/5 | Boost: {boost:+.1f}%"
+            if llm_decision is not None:
+                final_reason += f" | LLM (shadow): {llm_decision['decision']} {llm_decision['confidence']:.0f}%"
 
         # Write signal to Excel
         excel_manager.write_signal({
@@ -351,7 +383,16 @@ class ForexBot:
             and final_dir in ("BUY", "SELL")
             and m5_aligned
         )
-        
+
+        if direction in ("BUY", "SELL"):
+            candidate_log.log_event("candidate", {
+                "symbol": symbol, "direction": direction, "probability": probability, "adjusted_prob": adjusted_prob,
+                "boost": boost, "checks_passed": checks_passed, "checks_failed": checks_failed,
+                "m5_trigger": confluence["m5_trigger"], "news_blocked": news_blocked,
+                "regime": {"h4": regime["h4_regime"], "h1": regime["h1_regime"], "size_factor": regime.get("size_factor", 1.0)},
+                "llm": llm_decision, "llm_veto_active": LLM_VETO_ACTIVE,
+                "final_dir": final_dir, "m5_aligned": m5_aligned, "should_trade": should_trade,
+            })
 
         if not should_trade:
             return
@@ -360,18 +401,26 @@ class ForexBot:
         guard2 = order_manager.can_trade_symbol(symbol, final_dir, positions, pending)
         if not guard2["allowed"]:
             logger.info(f"{symbol}: {guard2['reason']}")
+            candidate_log.log_event("blocked", {"symbol": symbol, "direction": final_dir, "reason": guard2["reason"]})
             return
         # Correlation filter
         corr_check = correlation_filter.check(symbol, final_dir, positions, pending)
         if not corr_check["allowed"]:
             logger.info(f"{symbol}: Correlation SKIP - {corr_check['reason']}")
+            candidate_log.log_event("blocked", {"symbol": symbol, "direction": final_dir,
+                                                "reason": f"correlation: {corr_check['reason']}"})
             return
         logger.info(f"{symbol}: Exposure - {correlation_filter.get_exposure_summary(positions, pending)}")
+
+        # The terminal's account may have been switched since the cycle started: re-check right before any order
+        if not connector.account_still_allowed():
+            self._stop_refused("account changed before order placement")
 
         # Determine entry type and place order
         entry_type    = order_manager.get_entry_type(confluence)
         tick          = connector.get_tick(symbol)
         if not tick:
+            candidate_log.log_event("blocked", {"symbol": symbol, "direction": final_dir, "reason": "no live tick"})
             return
         current_price = tick["ask"] if final_dir == "BUY" else tick["bid"]
 
@@ -441,6 +490,11 @@ class ForexBot:
         if result:
             order_manager.record_trade(symbol, direction)
             self._log_trade(symbol, direction, position, price, confluence, "MARKET")
+            candidate_log.log_event("order", {
+                "symbol": symbol, "direction": direction, "order_type": "MARKET", "price": price,
+                "volume": position["volume"], "sl": position["sl"], "tp": position["tp"],
+                "risk_amount": position["risk_amount"], "ticket": result.get("order") if isinstance(result, dict) else None,
+            })
 
     def _place_limit_order(self, symbol, direction, limit_price, confluence, account, df, size_factor=1.0):
         balance = account.get("balance", 0)
@@ -528,6 +582,11 @@ class ForexBot:
                 "price":     limit_price,
             })
             self._log_trade(symbol, direction, position, limit_price, confluence, f"PENDING_{order_subtype}")
+            candidate_log.log_event("order", {
+                "symbol": symbol, "direction": direction, "order_type": f"PENDING_{order_subtype}", "price": limit_price,
+                "volume": position["volume"], "sl": position["sl"], "tp": position["tp"],
+                "risk_amount": position["risk_amount"], "ticket": result.get("order") if isinstance(result, dict) else None,
+            })
 
     def _log_trade(self, symbol, direction, position, entry, confluence, order_type):
         tags = " | ".join([

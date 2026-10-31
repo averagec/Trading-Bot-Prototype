@@ -7,6 +7,7 @@
 *.log
 forex_bot_dashboard.xlsx
 pair_data.json
+logs/
 news_cache.json
 risk_baselines.json
 STOP
