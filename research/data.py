@@ -377,13 +377,39 @@ def log_quality_once(df: pd.DataFrame, symbol: str, tf: str) -> None:
         logger.debug("data quality check skipped for %s %s: %s", symbol, tf, e)
 
 
+SENTINEL_PTS = 50          # recorded spread value that dominates some FX months (see sentinel_mask)
+SENTINEL_MONTH_SHARE = 0.10
+SENTINEL_FROM = "2018-01-01"   # earlier 50s are a nominal constant spread, not the placeholder
+
+
+def sentinel_mask(df: pd.DataFrame, symbol: str) -> np.ndarray:
+    """True where the recorded spread is the 50-point placeholder. Found by inspection: from 2020-05 to 2021-09 the FX
+    pairs record exactly 50 points (5 pips) on 14-93 % of M5 bars per month, and 1 point on most of the rest; GBPUSD shows
+    the same in 2019-01..03. The terminal returns the same values, so it is the broker's history. A bar is flagged when it
+    equals 50 AND at least 10 % of that pair's bars in its calendar month (same timeframe) equal 50, so genuine isolated
+    5-pip rollover spreads in other months are kept. Gold is never flagged (50 points is normal for it).
+    Bars before SENTINEL_FROM are never flagged: the 2000-2003 H1/H4 history records a constant nominal 50-point spread,
+    which the month-share rule alone would mistake for the placeholder.
+    The month share is a data-cleaning statistic, not a trading input: it does not use trade results."""
+    if symbol == "XAUUSD" or not len(df):
+        return np.zeros(len(df), bool)
+    is50 = (df["spread"].to_numpy() == SENTINEL_PTS)
+    month = df["time"].dt.strftime("%Y-%m").to_numpy()
+    share = pd.Series(is50).groupby(month).transform("mean").to_numpy()
+    late = (df["time"] >= pd.Timestamp(SENTINEL_FROM, tz="UTC")).to_numpy()
+    return is50 & (share >= SENTINEL_MONTH_SHARE) & late
+
+
 def prepare_bars(symbol: str, data_dir: Path = DATA_DIR,
                  start: Optional[str] = None, end: Optional[str] = None,
-                 check_quality: bool = True) -> dict:
+                 check_quality: bool = True, sentinel_missing: bool = False) -> dict:
     """
     All four timeframes for a symbol, with a usable `spread_pts` column.
     History bars sometimes carry spread 0; those are replaced by the median non-zero spread
     for the same UTC hour (so the simulator never assumes a free spread).
+    `sentinel_missing=True` (default off, so existing results reproduce) treats the 50-point placeholder spread
+    (`sentinel_mask`) like a zero: it is replaced by the same-UTC-hour median of the bars that are neither zero nor
+    sentinel, flagged in `spread_was_sentinel`, and excluded from that median. The replacement is an estimate.
     Synthetic spreads (third-party imports, `spread_synth` True) are kept as-is, flagged in `spread_synthetic`,
     and are EXCLUDED from the hourly medians so they cannot contaminate the broker-recorded statistic.
     Note: `start` trims M5 only; the higher timeframes keep their earlier history so indicators are warm.
@@ -397,10 +423,13 @@ def prepare_bars(symbol: str, data_dir: Path = DATA_DIR,
         sp = df["spread"].astype(float)
         synth = df["spread_synth"].astype(bool) if "spread_synth" in df.columns \
             else pd.Series(False, index=df.index)
-        nz = sp.where((sp > 0) & ~synth)
+        sent = pd.Series(sentinel_mask(df, symbol) if sentinel_missing else False, index=df.index)
+        good = (sp > 0) & ~sent
+        nz = sp.where(good & ~synth)
         by_hour = nz.groupby(df["time"].dt.hour).transform("median")
-        df["spread_pts"] = sp.where(sp > 0, by_hour).fillna(nz.median()).fillna(0.0)
+        df["spread_pts"] = sp.where(good, by_hour).fillna(nz.median()).fillna(0.0)
         df["spread_was_zero"] = sp <= 0
+        df["spread_was_sentinel"] = sent.to_numpy()
         df["spread_synthetic"] = synth.to_numpy()
         out[tf] = df
     return out

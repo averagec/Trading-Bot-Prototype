@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 from research.data import prepare_bars, load_specs
-from research.signals import SignalConfig, build_candidates_cached
+from research.signals import SignalConfig, build_candidates, build_candidates_cached
 from research.sim import Simulator, SimConfig
 from research.metrics import summarize, breakdowns, day_table
 from research.montecarlo import trade_mc, ftmo_mc, FtmoRules, stress_tests, edge_summary
@@ -31,13 +31,17 @@ OUT = Path(__file__).resolve().parent / "output"
 
 
 def _cand_job(args):
-    symbol, start, sig_cfg, refresh, point = args
-    bars = prepare_bars(symbol, start=start)
+    symbol, start, sig_cfg, refresh, point, *rest = args
+    end = rest[0] if rest else None
+    sentinel_missing = bool(rest[1]) if len(rest) > 1 else False
+    bars = prepare_bars(symbol, start=start, end=end, sentinel_missing=sentinel_missing)
+    if sentinel_missing:           # the candidate cache key does not see the spread treatment, so do not read or write it
+        return build_candidates(symbol, bars, sig_cfg, point)
     return build_candidates_cached(symbol, bars, sig_cfg, point, refresh=refresh)
 
 
-def get_candidates(symbols, specs, sig_cfg, start, refresh, workers):
-    jobs = [(s, start, sig_cfg, refresh, specs[s]["point"]) for s in symbols]
+def get_candidates(symbols, specs, sig_cfg, start, refresh, workers, end=None, sentinel_missing=False):
+    jobs = [(s, start, sig_cfg, refresh, specs[s]["point"], end, sentinel_missing) for s in symbols]
     if workers > 1:
         with ProcessPoolExecutor(max_workers=workers) as ex:
             frames = list(ex.map(_cand_job, jobs))
@@ -47,8 +51,8 @@ def get_candidates(symbols, specs, sig_cfg, start, refresh, workers):
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
 
-def simulate(symbols, specs, cands, sim_cfg, start):
-    m5 = {s: prepare_bars(s, start=start)["M5"] for s in symbols}
+def simulate(symbols, specs, cands, sim_cfg, start, end=None, sentinel_missing=False):
+    m5 = {s: prepare_bars(s, start=start, end=end, sentinel_missing=sentinel_missing)["M5"] for s in symbols}
     return Simulator(symbols, m5, specs, cands, sim_cfg).run()
 
 
@@ -144,7 +148,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tag", default="base")
     ap.add_argument("--start", default=None, help="trim M5 start (UTC date)")
+    ap.add_argument("--end", default=None, help="drop every bar at or after this UTC date, on all timeframes (DEV-only runs)")
     ap.add_argument("--oos-start", default=None, help="date from which trades are reported as out-of-sample")
+    ap.add_argument("--sentinel-missing", action="store_true",
+                    help="treat the broker's 50-point placeholder spread (2020-05..2021-09) as missing and impute it; "
+                         "candidates are then built uncached")
     ap.add_argument("--variants", action="store_true")
     ap.add_argument("--no-mc", action="store_true")
     ap.add_argument("--refresh", action="store_true")
@@ -159,7 +167,7 @@ def main():
     jobs = variants(base_sig, base_sim) if args.variants else {"base_faithful": (base_sig, base_sim)}
 
     # default OOS split: last 30% of the M5 span
-    m5 = prepare_bars(symbols[0], start=args.start)["M5"]
+    m5 = prepare_bars(symbols[0], start=args.start, end=args.end)["M5"]
     first, last = m5["time"].iloc[0], m5["time"].iloc[-1]
     oos = args.oos_start or str((first + (last - first) * 0.7).date())
     cov = f"M5 span {first.date()} -> {last.date()} | OOS from {oos} | symbols {symbols}\n"
@@ -173,9 +181,11 @@ def main():
         t0 = time.time()
         key = sig_cfg.signature()
         if key not in cand_cache:
-            cand_cache[key] = get_candidates(symbols, specs, sig_cfg, args.start, args.refresh, args.workers)
+            cand_cache[key] = get_candidates(symbols, specs, sig_cfg, args.start, args.refresh, args.workers,
+                                             end=args.end, sentinel_missing=args.sentinel_missing)
         cands = cand_cache[key]
-        res = simulate(symbols, specs, cands, sim_cfg, args.start)
+        res = simulate(symbols, specs, cands, sim_cfg, args.start, end=args.end,
+                       sentinel_missing=args.sentinel_missing)
         is_base = name == "base_faithful"
         out = analyse(res, sim_cfg, oos_start=oos, do_mc=(is_base and not args.no_mc), n_paths=args.paths)
         d = outdir / name

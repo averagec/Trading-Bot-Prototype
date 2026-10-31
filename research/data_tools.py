@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pandas as pd
 
 from research.data import DATA_DIR, TFS, fetch_history, coverage_report, BARS_WANTED
-from research.data_quality import quality_report, format_quality, quality_table
+from research.data_quality import quality_report, format_quality, quality_table, window_bars
 
 
 def _symbols(args) -> list:
@@ -96,13 +96,19 @@ def cmd_fetch(args) -> int:
 def cmd_quality(args) -> int:
     pd.set_option("display.width", 220, "display.max_columns", 30)
     syms = _symbols(args)
-    print(quality_table(syms, args.tfs or ["M5"], Path(args.data_dir)).to_string(index=False))
+    if args.by_year:
+        for year in range(args.by_year[0], args.by_year[1] + 1):
+            print(f"\n=== {year} ===")
+            print(quality_table(syms, args.tfs or ["M5"], Path(args.data_dir),
+                                since=f"{year}-01-01", until=f"{year + 1}-01-01").to_string(index=False))
+        return 0
+    print(quality_table(syms, args.tfs or ["M5"], Path(args.data_dir), since=args.since, until=args.until).to_string(index=False))
     if args.detail:
         for s in syms:
             for tf in args.tfs or ["M5"]:
                 p = Path(args.data_dir) / f"{s}_{tf}.parquet"
                 if p.exists():
-                    rep = quality_report(pd.read_parquet(p), tf=tf, symbol=s)
+                    rep = quality_report(window_bars(pd.read_parquet(p), args.since, args.until), tf=tf, symbol=s)
                     print(format_quality(rep))
                     print("  largest unexplained gaps:", rep["details"].get("largest_unexplained_gaps"))
                     zs = rep["details"].get("zero_spread_pct_by_month")
@@ -161,7 +167,11 @@ def main(argv=None) -> int:
     p.set_defaults(fn=cmd_fetch)
 
     p = sub.add_parser("quality"); p.add_argument("--symbols", nargs="*"); p.add_argument("--tfs", nargs="*")
-    p.add_argument("--detail", action="store_true"); p.set_defaults(fn=cmd_quality)
+    p.add_argument("--detail", action="store_true")
+    p.add_argument("--since", help="UTC date: report only bars from this date (inclusive)")
+    p.add_argument("--until", help="UTC date: report only bars before this date")
+    p.add_argument("--by-year", nargs=2, type=int, metavar=("FIRST", "LAST"), help="one table per calendar year")
+    p.set_defaults(fn=cmd_quality)
 
     p = sub.add_parser("import")
     p.add_argument("--symbol", required=True); p.add_argument("--file", required=True)

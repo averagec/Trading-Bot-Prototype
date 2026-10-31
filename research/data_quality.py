@@ -256,10 +256,24 @@ def format_quality(rep: dict) -> str:
     return "\n".join(lines)
 
 
+def window_bars(df: pd.DataFrame, since: Optional[str] = None, until: Optional[str] = None) -> pd.DataFrame:
+    """Bars from `since` (inclusive) to `until` (exclusive); UTC dates, either may be None."""
+    if since is None and until is None:
+        return df
+    t = pd.to_datetime(df["time"])
+    tz = "UTC" if t.dt.tz is not None else None
+    keep = pd.Series(True, index=df.index)
+    if since is not None:
+        keep &= t >= pd.Timestamp(since, tz=tz)
+    if until is not None:
+        keep &= t < pd.Timestamp(until, tz=tz)
+    return df[keep]
+
+
 def quality_table(symbols: Iterable[str], tfs: Iterable[str] = ("M5",), data_dir: Optional[Path] = None,
-                  since: Optional[str] = None) -> pd.DataFrame:
+                  since: Optional[str] = None, until: Optional[str] = None) -> pd.DataFrame:
     """One row per symbol/timeframe from the parquet cache - handy for a printout at the top of a run.
-    `since` (UTC date, e.g. "2021-06-01") restricts the report to bars from that date on."""
+    `since` / `until` (UTC dates, e.g. "2021-06-01") restrict the report to bars from `since` (inclusive) up to `until` (exclusive)."""
     from research.data import DATA_DIR
     data_dir = Path(data_dir or DATA_DIR)
     rows = []
@@ -269,11 +283,7 @@ def quality_table(symbols: Iterable[str], tfs: Iterable[str] = ("M5",), data_dir
             if not p.exists():
                 rows.append({"symbol": s, "tf": tf, "ok": False, "bars": 0})
                 continue
-            df = pd.read_parquet(p)
-            if since is not None:
-                t = pd.to_datetime(df["time"])
-                df = df[t >= (pd.Timestamp(since, tz="UTC") if t.dt.tz is not None else pd.Timestamp(since))]
-            rep = quality_report(df, tf=tf, symbol=s)
+            rep = quality_report(window_bars(pd.read_parquet(p), since, until), tf=tf, symbol=s)
             m = rep["metrics"]
             rows.append({"symbol": s, "tf": tf, "ok": rep["ok"], "bars": m["bars"],
                          "first": str(m["first"])[:10], "last": str(m["last"])[:10],

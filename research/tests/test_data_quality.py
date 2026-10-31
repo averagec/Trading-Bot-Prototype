@@ -119,3 +119,10 @@ def test_quality_table_since_restricts_the_window(clean_m5, tmp_path):
     cut = quality_table(["TEST"], ["M5"], data_dir=tmp_path, since="2025-01-01")
     assert everything["first"].iloc[0] < "2025-01-01" <= cut["first"].iloc[0]
     assert 0 < cut["bars"].iloc[0] < everything["bars"].iloc[0]
+
+
+def test_quality_table_until_is_exclusive_and_composes_with_since(clean_m5, tmp_path):
+    clean_m5.to_parquet(tmp_path / "TEST_M5.parquet")
+    win = quality_table(["TEST"], ["M5"], data_dir=tmp_path, since="2024-10-01", until="2024-11-01")
+    assert win["first"].iloc[0] >= "2024-10-01" and win["last"].iloc[0] < "2024-11-01"
+    assert 0 < win["bars"].iloc[0] < quality_table(["TEST"], ["M5"], data_dir=tmp_path)["bars"].iloc[0]

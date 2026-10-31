@@ -31,9 +31,9 @@ def main(workers=14):
         seeds = list(range(N_SEEDS))
         for name, cfg in steps.items():
             chunks = [seeds[i::workers] for i in range(workers)]
-            jobs = [(ch, cand_path, symbols, specs, None, cfg) for ch in chunks if ch]
+            jobs = [(ch, cand_path, symbols, specs, None, cfg, None) for ch in chunks if ch]
             with ProcessPoolExecutor(max_workers=workers) as ex:
-                rows = [r for part in ex.map(_run_seeds, jobs) for r in part]
+                rows = [r for part_rows, _ in ex.map(_run_seeds, jobs) for r in part_rows]
             df = pd.DataFrame(rows)
             out[f"{label} | {name}"] = {"mean_expectancy_r": float(df.expectancy_r.mean()), "sd": float(df.expectancy_r.std()),
                                         "mean_win_rate": float(df.win_rate_pct.mean()), "mean_trades": float(df.trades.mean())}
