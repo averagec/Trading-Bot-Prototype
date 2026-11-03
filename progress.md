@@ -17,6 +17,10 @@ Format: date - what changed - result/verdict - what's next or open.
 - Verdict: reviewer FAIL on wording only (daily-limit 0.00 % and "0 of 20,000" over-claims in the quant report); fixed. Suite 625 passed, no-lookahead passed, regression 861 / -0.210 R, no tracked file changed, FINAL never read.
 - Open: quant preregs have no hash/commit (commit preregs before runs next time); decide on the demo-profile live-code change (reviewer-gated) and whether to pre-register the ATR floor for a locked-holdout run; analyst follow-ups F1-F4 specified, not run.
 
+## 2026-11-03 (close-out)
+- Wrote `research/reports/closeout_2026-11-03.md`: GAMEPLAN section 9 outcome **No-go**. Stage 0 KILL, H1 and H4/D1 ML null, ATR floor tier D (+0.010 R on real signals), R3 slow momentum no candidate (other session's run, outputs read, not re-checked). FINAL untouched.
+- Open: owner to confirm no-go and the demo-only / off decision; uncommitted work (nothing committed by this session); R3 not yet in `RESULTS.md`; scikit-learn not in `requirements.txt`.
+
 ## 2026-10-30 (A2' slow-horizon study: null)
 - Pre-registered (`research/reports/ai_slow_prereg.md`) and run once on DEV (2003-2021-05, 5 pairs, H4 and D1, k 1.0/1.5, logistic confirmatory, K=4). Verdict: **no variant learnable, all four falsified**
   (directional AUC 0.500 to 0.505; C1, C2, S and F all fail; features make log-loss slightly worse than the non-directional model). Top-decile net R has no lower bound above 0 at x1, x1.5 or x2.

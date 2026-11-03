@@ -182,6 +182,8 @@ Thresholds are proposals to confirm in week 0, set before any FINAL run.
 | Go to a challenge attempt | the above, plus: at least 70 % of years positive, no single year above half of total R, still positive with the top 1 % of trades removed, results with and without XAUUSD, demo fills and slippage within the stressed-cost assumptions, a two-phase Monte Carlo on a halved edge (winner's curse) above a pass-rate threshold you set, live risk code checked against FTMO's current terms, a fee-at-risk ceiling |
 | No-go | anything else; write-up in `RESULTS.md`; bot stays demo-only or off; research engine and harness remain |
 
+**Outcome (2026-11-03): No-go.** No configuration cleared DEV, FINAL was never used. See `research/reports/closeout_2026-11-03.md`.
+
 Arithmetic to keep in mind: at fixed 0.25 % risk and about 50 trades a month, a true 0.10 R edge earns about +1.25 % a month, so
 the 10 % target takes roughly 8 months. A challenge only works if risk is raised, and ruin probability rises with it.
 
