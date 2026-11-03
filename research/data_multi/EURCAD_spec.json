@@ -1,0 +1,1 @@
+{"path": "Forex\\EURCAD", "bars": 6758, "first": "2000-03-30 00:00:00+00:00", "last": "2026-11-03 00:00:00+00:00", "digits": 5, "point": 1e-05, "contract_size": 100000.0, "swap_long": -2.95, "swap_short": -4.0, "swap_mode": 1, "currency_base": "EUR", "currency_profit": "CAD"}

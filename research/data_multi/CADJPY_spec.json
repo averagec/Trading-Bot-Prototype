@@ -1,0 +1,1 @@
+{"path": "Forex\\CADJPY", "bars": 5108, "first": "2007-02-12 00:00:00+00:00", "last": "2026-11-03 00:00:00+00:00", "digits": 3, "point": 0.001, "contract_size": 100000.0, "swap_long": 1.03, "swap_short": -6.65, "swap_mode": 1, "currency_base": "CAD", "currency_profit": "JPY"}

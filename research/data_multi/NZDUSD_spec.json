@@ -1,0 +1,1 @@
+{"path": "Forex\\NZDUSD", "bars": 6912, "first": "2000-03-29 00:00:00+00:00", "last": "2026-11-03 00:00:00+00:00", "digits": 5, "point": 1e-05, "contract_size": 100000.0, "swap_long": -4.84, "swap_short": 0.1, "swap_mode": 1, "currency_base": "NZD", "currency_profit": "USD"}

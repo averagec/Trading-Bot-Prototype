@@ -1,0 +1,1 @@
+{"path": "Forex\\AUDNZD", "bars": 6800, "first": "2000-03-30 00:00:00+00:00", "last": "2026-11-03 00:00:00+00:00", "digits": 5, "point": 1e-05, "contract_size": 100000.0, "swap_long": 2.8, "swap_short": -11.43, "swap_mode": 1, "currency_base": "AUD", "currency_profit": "NZD"}

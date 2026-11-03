@@ -1,0 +1,1 @@
+{"path": "Forex\\GBPAUD", "bars": 4971, "first": "2007-08-21 00:00:00+00:00", "last": "2026-11-03 00:00:00+00:00", "digits": 5, "point": 1e-05, "contract_size": 100000.0, "swap_long": -12.47, "swap_short": -2.13, "swap_mode": 1, "currency_base": "GBP", "currency_profit": "AUD"}

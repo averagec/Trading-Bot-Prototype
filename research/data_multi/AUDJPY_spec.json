@@ -1,0 +1,1 @@
+{"path": "Forex\\AUDJPY", "bars": 6854, "first": "2000-03-29 00:00:00+00:00", "last": "2026-11-03 00:00:00+00:00", "digits": 3, "point": 0.001, "contract_size": 100000.0, "swap_long": 4.63, "swap_short": -15.04, "swap_mode": 1, "currency_base": "AUD", "currency_profit": "JPY"}

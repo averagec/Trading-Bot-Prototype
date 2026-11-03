@@ -1,0 +1,5 @@
+FRED (St. Louis Fed) public CSV, fetched 2026-11-03 via https://fred.stlouisfed.org/graph/fredgraph.csv?id=<ID>
+3-month interbank rate, monthly average, percent per year (OECD Main Economic Indicators). No account, no key.
+USA IR3TIB01USM156N  EUR IR3TIB01EZM156N  GBR IR3TIB01GBM156N  JPN IR3TIB01JPM156N  AUS IR3TIB01AUM156N
+CAN IR3TIB01CAM156N  CHE IR3TIB01CHM156N  NZL IR3TIB01NZM156N  NOR IR3TIB01NOM156N  SWE IR3TIB01SEM156N
+Monthly averages: a value for month m is only known after month m ends; any use must lag it by at least one month.

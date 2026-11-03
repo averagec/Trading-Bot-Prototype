@@ -1,0 +1,1 @@
+{"path": "Forex\\CHFJPY", "bars": 6856, "first": "2000-03-29 00:00:00+00:00", "last": "2026-11-03 00:00:00+00:00", "digits": 3, "point": 0.001, "contract_size": 100000.0, "swap_long": -13.29, "swap_short": 1.86, "swap_mode": 1, "currency_base": "CHF", "currency_profit": "JPY"}

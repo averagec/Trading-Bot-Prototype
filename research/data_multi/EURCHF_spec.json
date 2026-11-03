@@ -1,0 +1,1 @@
+{"path": "Forex\\EURCHF", "bars": 6902, "first": "2000-03-29 00:00:00+00:00", "last": "2026-11-03 00:00:00+00:00", "digits": 5, "point": 1e-05, "contract_size": 100000.0, "swap_long": 1.12, "swap_short": -11.27, "swap_mode": 1, "currency_base": "EUR", "currency_profit": "CHF"}

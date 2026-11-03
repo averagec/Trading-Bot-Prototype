@@ -1,0 +1,1 @@
+{"path": "Forex\\GBPJPY", "bars": 6914, "first": "2000-03-29 00:00:00+00:00", "last": "2026-11-03 00:00:00+00:00", "digits": 3, "point": 0.001, "contract_size": 100000.0, "swap_long": 3.13, "swap_short": -21.7, "swap_mode": 1, "currency_base": "GBP", "currency_profit": "JPY"}

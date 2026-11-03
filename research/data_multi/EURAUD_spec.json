@@ -1,0 +1,1 @@
+{"path": "Forex\\EURAUD", "bars": 5804, "first": "2004-06-17 00:00:00+00:00", "last": "2026-11-03 00:00:00+00:00", "digits": 5, "point": 1e-05, "contract_size": 100000.0, "swap_long": -15.05, "swap_short": 2.64, "swap_mode": 1, "currency_base": "EUR", "currency_profit": "AUD"}

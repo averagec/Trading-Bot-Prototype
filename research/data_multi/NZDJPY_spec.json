@@ -1,0 +1,1 @@
+{"path": "Forex\\NZDJPY", "bars": 5121, "first": "2007-02-12 00:00:00+00:00", "last": "2026-11-03 00:00:00+00:00", "digits": 3, "point": 0.001, "contract_size": 100000.0, "swap_long": 0.47, "swap_short": -5.17, "swap_mode": 1, "currency_base": "NZD", "currency_profit": "JPY"}
