@@ -212,6 +212,7 @@ def test_final_is_disabled_without_final_go(monkeypatch, tmp_path):
     def boom(*a, **k):
         raise AssertionError("FINAL data path was reached")
     monkeypatch.setattr(afc, "FINAL_GO", tmp_path / "FINAL_GO")
+    monkeypatch.setattr(afc.final_gate, "__defaults__", (tmp_path / "FINAL_GO", afc.PREREG))  # default bound at definition time
     monkeypatch.setattr(afc, "run_experiment", boom)
     monkeypatch.setattr(afc, "prepare_bars", boom)
     import research.run as rr

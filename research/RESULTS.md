@@ -278,3 +278,17 @@ Full reports: `reports/session_pair_weekend_analysis.md` (data analyst) and `rep
 Analyst: 4,173 trades, -0.100 R vs null -0.104 (skill +0.004, SE 0.019); no pair and no session/weekday bucket shows skill after correction; the live bot never trades weekends.
 Quant: 3,970 trades, -0.131 R, 0.091 R of it cost; an ATR-scaled minimum stop reduces the null drag by 0.04-0.10 R (hypothesis, not confirmed on FINAL); at the live 0.25% risk the 10% static loss limit is breached within 12 months in 86% of resampled paths.
 The two baselines differ by treatment of the broker 50-point placeholder spread (as recorded vs imputed), not by error.
+
+## ATR-scaled minimum stop (k = 1.0), DEV re-measurement (2026-10-31, DEV only; report `reports/atr_floor_dev_report.md`, prereg v2 `reports/atr_floor_prereg.md`)
+
+Stage 1, one run on DEV (2014-01 to 2021-06, six pairs, sentinel-missing), 4,203 control vs 4,294 treated trades. A re-measurement of the quant's `quant_s1` candidates (acceptance check: 0 mismatches in 21 runs; 40/40 hand-checked trades), not a new test. FINAL not loaded.
+Real signals, treated minus control: **+0.010 R per trade** [-0.025, +0.044], control -0.1125 R, treated -0.1025 R. On the random-direction null (40 seeds): **+0.033 R** [+0.012, +0.056], positive in 7 of 8 years.
+The real-signal gain falls to +0.001 R under the neutral fill-bar convention and is +0.02 R without gold; expectancy stays negative (about -4.9 R per month, drawdown -68 %). Mechanism confirmed (commission per R down a third, fill-bar stop-outs halved, worst trade -12.7 R to -9.0 R), skill not. Tier D on the prereg table.
+The quant's +0.04 to +0.10 R null-drag range above came from k 1.0 to 3.0 including the larger floors; the k = 1.0 arm re-measured here gives +0.033 R. The extra-trend arms (k 2.5, 3.0) were added after seeing the trend and are not used. Not reproducible from committed code: the by-year/flagged-year/before-after-2020-05 cuts in the report (ad hoc analysis, disclosed in its section 7).
+A FINAL run could detect a real-signal gain of about 0.067 R or more at 80 % power; at the DEV estimate the chance of a decisive answer is 6 to 14 %. No `FINAL_GO` was created.
+
+## Slow price-only momentum R3-1 (2026-10-31, DEV only; prereg `reports/slow_momentum_prereg.md`, output `output/slow_momentum_dev/`)
+
+One run on 2003 to 2021-06 (six instruments, D1/weekly, six look-back variants V1-V6, Holm over six, block-permutation and shift nulls, 960 weeks). Buy-and-hold baseline Sharpe +0.07 before financing, -0.36 after.
+**No variant eligible, no candidate.** Best variant V3 (126-day look-back): Sharpe +0.50 after spread and commission but before financing [+0.09, +0.90], +0.21 after the S1 financing charge [-0.21, +0.62], Holm-adjusted p 0.126, negative without its best three years (-0.04), so G1, G3a, G3b (10 positive years, 13 required) and G5 fail. V2 and V3 show shift-null p of 0.046 and 0.007; that check is descriptive, not part of the verdict.
+Reading: "not detectable at this power", not "does not exist". FINAL (2021-06 to 2025-04) was not read and no `FINAL_GO` exists.
